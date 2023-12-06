@@ -15,10 +15,10 @@ class ReserveProxyObj
 public:
     ReserveProxyObj(const size_t capacity_to_reserve) 
     :reverse_assistant_(capacity_to_reserve)
-    {
-    }
+    {}
  
-    size_t GetSize() { 
+    size_t GetSize() 
+    { 
         return reverse_assistant_; 
     }
     
@@ -40,11 +40,6 @@ public:
     using ConstIterator = const Type*;
 
     SimpleVector() noexcept = default;
-
-    // ~SimpleVector() 
-    // {
-    //     delete[] ptr_;
-    // }
 
     // Создаёт вектор из size элементов, инициализированных значением по умолчанию
     SimpleVector(size_t size) : SimpleVector(size, Type()) 
@@ -75,7 +70,8 @@ public:
             swap(tmp_items);
         }
     }
-// Создаёт вектор из std::initializer_list
+
+    // Создаёт вектор из std::initializer_list
     SimpleVector(std::initializer_list<Type> init) 
     {
         ArrayPtr<Type> tmp_ptr(init.size());
@@ -105,16 +101,6 @@ public:
     /* move-конструктор копирования */
     SimpleVector(SimpleVector&& other) 
     {
-        // ArrayPtr<Type> tmp_ptr(other.GetCapacity());
-        // std::copy(std::make_move_iterator(other.cbegin()), 
-        //           std::make_move_iterator(other.cend()), 
-        //           tmp_ptr.Get());
-
-        // ptr_.swap(tmp_ptr);
-
-        // size_     = std::exchange(other.size_, 0);
-        // capacity_ = std::exchange(other.capacity_, 0);
-
         ptr_.swap(other.ptr_);
         size_ = std::exchange(other.size_, 0);
         capacity_ = std::exchange(other.capacity_, 0);
@@ -132,20 +118,14 @@ public:
 
     SimpleVector& operator=(SimpleVector&& other)
     {
-        // ArrayPtr<Type> tmp_ptr(other.GetCapacity());
-        // std::copy(std::make_move_iterator(other.cbegin()), 
-        //           std::make_move_iterator(other.cend()), 
-        //           tmp_ptr.Get());
-
         ptr_.swap(other.ptr_);
 
-        // size_     = std::exchange(other.size_, 0);
-        // capacity_ = std::exchange(other.capacity_, 0);
         size_     = std::exchange(other.size_, 0);
         capacity_ = std::exchange(other.capacity_, 0);
         return *this;
     }
- // Обменивает значение с другим вектором
+    
+    // Обменивает значение с другим вектором
     void swap(SimpleVector& other) noexcept 
     {
         std::swap(size_, other.size_);
@@ -187,28 +167,20 @@ public:
     // вместимость вектора должна увеличиться вдвое, а для вектора вместимостью 0 стать равной 1
     Iterator Insert(ConstIterator pos, const Type& value) 
     {
-        assert(pos >= cbegin() && pos <= cend());
-        
-        auto pos_element = std::distance(cbegin(), pos);
-        
-        if (size_ < capacity_) 
-        {
-            std::copy_backward(pos, cend(), &ptr_[(size_ + 1)]);
-            ptr_[pos_element] = value;
-        } 
-        else 
-        {
-            auto new_capacity = std::max(size_t(1), 2 * capacity_); //защита, если capacity_=0
-            Type* tmp_ptr = new Type[new_capacity];
-            std::copy(&ptr_[0], &ptr_[pos_element], &tmp_ptr[0]);
-            std::copy_backward(pos, cend(), &tmp_ptr[(size_ + 1)]);
-            tmp_ptr[pos_element] = value;
-            std::swap(tmp_ptr, ptr_);
-            capacity_ = new_capacity;
-        }
-        
-        ++size_;
-        return Iterator{&ptr_[pos_element]};
+    {
+        assert(pos >= begin() && pos <= end());
+        auto step_ = pos - begin();
+
+        if (capacity_ == size_) 
+            ReCapacity(size_+1);
+
+        std::move_backward(begin() + step_, end(), end() + 1);
+
+        auto* it = begin() + step_;
+        *it = std::move(value);
+        size_++;
+        return it;
+    }
     }
 
     Iterator Insert(ConstIterator pos, Type&& value) 
@@ -226,7 +198,8 @@ public:
         size_++;
         return it;
     }
-// Удаляет элемент вектора в указанной позиции
+
+    // Удаляет элемент вектора в указанной позиции
     Iterator Erase(ConstIterator pos) 
     {
 
