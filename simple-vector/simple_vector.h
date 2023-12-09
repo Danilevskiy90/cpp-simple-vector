@@ -73,6 +73,7 @@ public:
 
     // Создаёт вектор из std::initializer_list
     SimpleVector(std::initializer_list<Type> init) 
+        : size_(init.size()), capacity_(init.size())
     {
         ArrayPtr<Type> tmp_ptr(init.size());
         std::copy(std::make_move_iterator(init.begin()), 
@@ -80,22 +81,19 @@ public:
                   tmp_ptr.Get());
                   
         ptr_.swap(tmp_ptr);
-
-        size_ = capacity_ = init.size();
     }
 
-    // Конструктор копирования
+    // Конструктор копирования                          /** Такой вопрос: а как можно использовать перемещающие конструктор и оператор присваивания 
+                                                        /** умного указателя в конструкторе вектора? */
     SimpleVector(const SimpleVector& other) 
+        :  size_(other.size_), capacity_(other.size_)
     {
-        
         ArrayPtr<Type> tmp_ptr(other.GetCapacity());
         std::copy(std::make_move_iterator(other.cbegin()), 
                   std::make_move_iterator(other.cend()), 
                   tmp_ptr.Get());
 
         ptr_.swap(tmp_ptr);
-        capacity_ = other.capacity_;
-        size_ = other.size_;
     }
 
     /* move-конструктор копирования */
@@ -138,9 +136,13 @@ public:
     void PushBack(const Type& item) 
     {
         if ( size_ == capacity_ )
+        {
             Resize(size_+1);
+        }
         else
+        {
             size_++;
+        }
 
         ptr_[size_-1] = item;
     }
@@ -148,9 +150,13 @@ public:
     void PushBack( Type&& item )
     {
         if ( size_ == capacity_ )
+        {
             Resize(size_+1);
+        }
         else
+        {
             size_++;
+        }
 
         ptr_[size_-1] = std::exchange(item, Type());
     }
@@ -158,7 +164,8 @@ public:
     // "Удаляет" последний элемент вектора. Вектор не должен быть пустым
     void PopBack() noexcept 
     {
-        size_ = (size_ > 0) ? size_ - 1 : size_;
+        assert(size_ > 0);
+        size_--;
     }
 
     // Вставляет значение value в позицию pos.
@@ -167,12 +174,15 @@ public:
     // вместимость вектора должна увеличиться вдвое, а для вектора вместимостью 0 стать равной 1
     Iterator Insert(ConstIterator pos, const Type& value) 
     {
-    {
         assert(pos >= begin() && pos <= end());
         auto step_ = pos - begin();
 
-        if (capacity_ == size_) 
+        if (capacity_ == size_)  /** не совсем понял, что тут стоит проверить на assert: размер ведь может быть равен вместимости, тогда
+                                  *  тогда мы просто вызываем ReCapacity, а проверять  size_ на ноль бессмысленно на мой взгляд, ведь мы можем вставить элемент в 
+                                  *  пустой вектор. Поясните пожалуйста) */
+        {
             ReCapacity(size_+1);
+        }
 
         std::move_backward(begin() + step_, end(), end() + 1);
 
@@ -181,7 +191,6 @@ public:
         size_++;
         return it;
     }
-    }
 
     Iterator Insert(ConstIterator pos, Type&& value) 
     {
@@ -189,7 +198,9 @@ public:
         auto step_ = pos - begin();
 
         if (capacity_ == size_) 
+        {
             ReCapacity(size_+1);
+        }
 
         std::move_backward(begin() + step_, end(), end() + 1);
 
@@ -202,6 +213,7 @@ public:
     // Удаляет элемент вектора в указанной позиции
     Iterator Erase(ConstIterator pos) 
     {
+        assert(size_ > 0);
 
         auto step_ = pos - begin();
         auto* it = begin() + step_;
@@ -246,9 +258,13 @@ public:
     Type& At(size_t index) const
     {
         if ( index < size_ )
+        {
             return *(ptr_.Get() + index);
+        }
         else
+        {
             throw std::out_of_range("Segmentation fault: .At");
+        }
     }
 
     // Обнуляет размер массива, не изменяя его вместимость
@@ -274,7 +290,9 @@ public:
                 }
             }
             else
+            {
                 ReCapacity(new_size * 2);
+            }
         }
         size_ = new_size;
     }
@@ -339,9 +357,13 @@ template <typename Type>
 inline bool operator==(const SimpleVector<Type>& lhs, const SimpleVector<Type>& rhs) 
 {
     if ( lhs.GetSize() == rhs.GetSize() )
+    {
         return std::equal(lhs.begin(), lhs.end(), rhs.begin());
+    }
     else    
+    {
         return false;
+    }
 }
 
 template <typename Type>
